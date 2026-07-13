@@ -9,8 +9,15 @@ library(spdep)
 library(RColorBrewer)
 library(HTLNbladderpod)
 
-# path to spatial data
-shape_path <- "C:/Users/kbailey/Documents/HTLN/data/spatial_bp"
+# getting databases from Renviron
+## database path
+PATH_DATA <- Sys.getenv("PATH_DATA")
+
+## shp path
+shape_path <- Sys.getenv("PATH_SPATIAL")
+
+## bloody hill database
+bh_database <- Sys.getenv("DATA_BASE_BH")
 
 # list for file names
 files <- list.files(shape_path,
@@ -48,8 +55,8 @@ plot(st_geometry(fcl_Grid_BH5mp))
 
 # Loading bp data (this will need to change when I get access to Microsoft stuff)
 importData(instance = 'local',
-           path = "C:/Users/kbailey/Documents/HTLN/HTLN Database/",
-           name = "MoBlad_BloodyHill_v3.66.accdb",  # "MoBlad_Glades_v1.8.accdb"
+           path = PATH_DATA,
+           name = bh_database,
            new_env = TRUE)
 
 # merging data

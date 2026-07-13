@@ -2,6 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-
+.Renviron
+.Rprofile
 data/
 .positai
+docs/*.html
+model_output/

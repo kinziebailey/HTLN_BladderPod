@@ -11,12 +11,17 @@ library(tidyverse) # data wrangling
 library(brms) # bayesian modeling
 library(bayesplot) # plotting bayesian
 
-
 # getting data ----
 ## bloodyhill data ----
+
+# getting databases from Renviron
+PATH_DATA <- Sys.getenv("PATH_DATA")
+bh_database <- Sys.getenv("DATA_BASE_BH")
+glad_database <- Sys.getenv("DATA_BASE_OTHER")
+
 importData(instance = 'local',
-           path = "C:/Users/kbailey/Documents/HTLN/HTLN Database/",
-           name = "MoBlad_BloodyHill_v3.66.accdb",  # "MoBlad_Glades_v1.8.accdb"
+           path = PATH_DATA,
+           name = bh_database,
            new_env = TRUE)
 
 bh_counts <- VIEWS_HTLN_BLDP$tbl_5m_MoBladCount
@@ -29,8 +34,8 @@ bh_location <- VIEWS_HTLN_BLDP$tlu_GridLocations
 
 ## other glades data ----
 importData(instance = 'local',
-           path = "C:/Users/kbailey/Documents/HTLN/HTLN Database/",
-           name = "MoBlad_Glades_v1.8.8.accdb",
+           path = PATH_DATA,
+           name = glad_database,
            new_env = TRUE)
 
 glad_counts <- VIEWS_HTLN_BLDP$tbl_MoBladGridCount
@@ -98,38 +103,6 @@ bp_data <- bp_data1 |>
   dplyr::left_join(density_class) |>
   dplyr::mutate(year = year(StartDate))
 
-
-
-
-# Treatment data frame
-treatment <- data.frame(glade = c("Bloody Hill", "Bloody Hill", "Bloody Hill", "Bloody Hill",
-                                  "Bloody Hill Hillside", "Bloody Hill Hillside",
-                                  "Bloody Hill Road", "Bloody Hill Road",
-                                  "Manley", "Manley", "Manley",
-                                  "North Bloody Hill", "North Bloody Hill", "North Bloody Hill",
-                                  "North Bloody Hill South", "North Bloody Hill South",
-                                  "Northwest Bloody Hill", "Northwest Bloody Hill", "Northwest Bloody Hill",
-                                  "Walnut", "Walnut", "Walnut" ,"Walnut", "Walnut",
-                                  "Wire Road", "Wire Road", "Wire Road", "Wire Road" ,"Wire Road"),
-                        treatment_date = c(2010, 2018, 2019, 2021,
-                                           2018, 2021,
-                                           2014, 2021,
-                                           2018, 2020, 2021,
-                                           2002, 2020, 2021,
-                                           2014, 2021,
-                                           2008, 2010, 2021,
-                                           1999, 2002, 2006, 2019, 2021,
-                                           2005, 2009, 2011, 2020, 2021),
-                        type = c("fire", "cedar", "cedar", "fire",
-                                 "cedar", "fire",
-                                 "fire", "fire",
-                                 "cedar", "cedar", "fire",
-                                 "fire", "cedar", "fire",
-                                 "fire", "fire",
-                                 "fire", "fire", "fire",
-                                 "fire", "fire", "cedar", "cedar", "fire",
-                                 "fire", "cedar", "fire", "cedar", "fire"))
-
 # time since treatment
 
 bp_data_treatment <- bp_data |>
@@ -137,7 +110,7 @@ bp_data_treatment <- bp_data |>
             by = c("Grid" = "glade"),
             relationship = "many-to-many")
 
-# probably not the most elegent way to do this......
+# probably not the most elegant way to do this......
 
 bp_data_treatment <- bp_data |>
   mutate(time_treatment = case_when(Grid == "Bloody Hill" &

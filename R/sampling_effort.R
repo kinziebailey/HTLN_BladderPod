@@ -22,9 +22,13 @@ library(lme4)
 # library(MuMIn)
 
 # getting bloodyhill data ----
+# getting databases from Renviron
+PATH_DATA <- Sys.getenv("PATH_DATA")
+bh_database <- Sys.getenv("DATA_BASE_BH")
+
 importData(instance = 'local',
-           path = "C:/Users/kbailey/Documents/HTLN/HTLN Database/",
-           name = "MoBlad_BloodyHill_v3.66.accdb",  # "MoBlad_Glades_v1.8.accdb"
+           path = PATH_DATA,
+           name = bh_database,
            new_env = TRUE)
 
 # merging data
