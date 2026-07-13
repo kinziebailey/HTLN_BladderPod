@@ -1,11 +1,30 @@
 # Getting data from the Bladderpod databases
 
+# Determine if packages need to be installed
+packages <-c(
+  "sf",
+  "archive",
+  "DBI",
+  "dplyr",
+  "odbc"
+)
+
+# Install packages if needed
+install_fun <- function(p) {
+  need_install <- p[!p %in% installed.packages()[, "Package"]]
+  if(length(need_install)) install.packages(need_install,
+                                            dependencies = TRUE)
+}
+
+install_fun(packages)
+
 # Libraries
-library(DBI)
-library(dplyr)
-library(odbc)
-# library(ImportExport)
-# Not sure what libraries I need yet
+library(DBI) # accessing databases
+library(dplyr) # data manipulation
+library(odbc) # used to connect with drive
+library(sf) # spatial data
+library(archive) # unzip files
+
 
 
 library(readr)
