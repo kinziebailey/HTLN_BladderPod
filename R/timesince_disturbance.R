@@ -27,7 +27,6 @@ importData(instance = 'local',
 bh_counts <- VIEWS_HTLN_BLDP$tbl_5m_MoBladCount
 bh_period <- VIEWS_HTLN_BLDP$tlu_PeriodID
 bh_core <- VIEWS_HTLN_BLDP$tlu_5m_Grid_Core
-# density_class <- VIEWS_HTLN_BLDP$tlu_DensityClasses
 bh_accuracy <- VIEWS_HTLN_BLDP$tbl_5m_Accuracy
 bh_cedar1 <- VIEWS_HTLN_BLDP$tbl_5m_Cedar
 bh_location <- VIEWS_HTLN_BLDP$tlu_GridLocations
@@ -46,6 +45,14 @@ locations <- VIEWS_HTLN_BLDP$tlu_GridIdLocation
 sampling_dates <- VIEWS_HTLN_BLDP$tlu_SamplingEvents
 # sampling_period <- VIEWS_HTLN_BLDP$tlu_SamplingPeriods
 density_class <- VIEWS_HTLN_BLDP$tlu_DensityClasses
+
+# reading in disturbance data
+treatments <- read.csv("data/MoBladFire.csv")
+
+treatments <- treatments |>
+  mutate(Date = as.POSIXct(Date,
+                           format = "%m/%d/%Y"),
+         year = year(Date))
 
 # merging data
 glad_data1 <- glad_cells |>
@@ -101,79 +108,31 @@ bp_data1 <- bind_rows(glad_data1,
 
 bp_data <- bp_data1 |>
   dplyr::left_join(density_class) |>
-  dplyr::mutate(year = year(StartDate))
+  dplyr::mutate(year = as.numeric(year(StartDate)),
+                DensityClass = case_when(DensityClass == -9999 ~ NA_real_,
+                                         TRUE ~ DensityClass))
+
 
 # time since treatment
-
 bp_data_treatment <- bp_data |>
-  full_join(treatment,
-            by = c("Grid" = "glade"),
-            relationship = "many-to-many")
-
-# probably not the most elegant way to do this......
-
-bp_data_treatment <- bp_data |>
-  mutate(time_treatment = case_when(Grid == "Bloody Hill" &
-                                      year >= 2010 & year < 2018 ~ year - 2010,
-                                    Grid == "Bloody Hill" &
-                                      year >= 2018 & year < 2019 ~ year - 2018,
-                                    Grid == "Bloody Hill" &
-                                      year >= 2019 & year < 2021 ~ year - 2019,
-                                    Grid == "Bloody Hill" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "Bloody Hill Hillside" &
-                                      year >= 2018 & year < 2022 ~ year - 2018,
-                                    Grid == "Bloody Hill Hillside" &
-                                      year >= 2022 ~ year - 2022,
-                                    Grid == "Bloody Hill Road" &
-                                      year >= 2014 & year < 2021 ~ year - 2014,
-                                    Grid == "Bloody Hill Road" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "Manley" &
-                                      year >= 2018 & year < 2020 ~ year - 2018,
-                                    Grid == "Manley" &
-                                      year >= 2020 & year < 2021 ~ year - 2020,
-                                    Grid == "Manley" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "North Bloody Hill" &
-                                      year >= 2002 & year < 2020 ~ year - 2002,
-                                    Grid == "North Bloody Hill" &
-                                      year >= 2020 & year < 2021 ~ year - 2020,
-                                    Grid == "North Bloody Hill" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "North Bloody Hill South" &
-                                      year >= 2014 & year < 2021 ~ year - 2014,
-                                    Grid == "North Bloody Hill South" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "Northwest Bloody Hill" &
-                                      year >= 2008 & year < 2010 ~ year - 2008,
-                                    Grid == "Northwest Bloody Hill" &
-                                      year >= 2010 & year < 2021 ~ year - 2010,
-                                    Grid == "Northwest Bloody Hill" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "Walnut" &
-                                      year >= 1999 & year < 2002 ~ year - 1999,
-                                    Grid == "Walnut" &
-                                      year >= 2002 & year < 2006 ~ year - 2002,
-                                    Grid == "Walnut" &
-                                      year >= 2006 & year < 2019 ~ year - 2006,
-                                    Grid == "Walnut" &
-                                      year >= 2019 & year < 2021 ~ year - 2019,
-                                    Grid == "Walnut" &
-                                      year >= 2021 ~ year - 2021,
-                                    Grid == "Wire Road" &
-                                      year >= 2006 & year < 2009 ~ year - 2006,
-                                    Grid == "Wire Road" &
-                                      year >= 2009 & year < 2011 ~ year - 2009,
-                                    Grid == "Wire Road" &
-                                      year >= 2011 & year < 2020 ~ year - 2011,
-                                    Grid == "Wire Road" &
-                                      year >= 2020 & year < 2021 ~ year - 2020,
-                                    Grid == "Wire Road" &
-                                      year >= 2021 ~ year - 2021,
-                                    TRUE ~ NA),
-         DensityClass = case_when(DensityClass == -9999 ~ NA,
-                                  TRUE ~ DensityClass),
+  # adding treatments by glade and year
+  left_join(treatments,
+            by = c("Grid" = "Glade",
+                   "year" = "year")) |>
+  arrange(Grid,
+          StartDate) |>
+  group_by(Grid) |>
+  fill(Date,
+       Type,
+       GladeImpacted) |>
+  mutate(Date_corrected = if_else(StartDate < Date,
+                        NA_Date_,
+                        Date)) |>
+  fill(Date_corrected,
+       Type,
+       GladeImpacted) |>
+  ungroup() |>
+  mutate(time_since_treatment = as.numeric(year(StartDate) - year(Date_corrected)),
          DensityClass_f = factor(DensityClass,
                                  levels = c("0",
                                             "1",
@@ -181,14 +140,15 @@ bp_data_treatment <- bp_data |>
                                             "3",
                                             "4",
                                             "5",
-                                            "6",
-                                            "7"),
-                                 ordered = TRUE)) |>
-  arrange(Grid,
-          CellID,
-          StartDate)
+                                            "6"),
+                                 ordered = TRUE),
+         treatment = if_else(if_any(c("Date_corrected",
+                                      "Type"), is.na),
+                             NA_character_,
+                             paste0(year(Date_corrected),
+                                    Type)))
 
-# plottin data -----
+# plotting data -----
 
 ggplot() +
   geom_bar(data = bp_data_treatment,
@@ -196,37 +156,94 @@ ggplot() +
   facet_wrap(~Grid,
              scale = "free")
 
-# number of plots in density classes per year
-bp_year <- bp_data_treatment |>
-  count(time_treatment,
-        DensityClass_f,
-        name = "count")
+# Average density class per yst
 
-ggplot() +
-  geom_boxplot(data = bp_year,
-               aes(x = DensityClass_f,
-                   y = count,
-                   fill = DensityClass_f))
+avg_dens <- bp_data_treatment |>
+  summarise(avg_denclass = mean(DensityClass,
+                                na.rm = TRUE),
+            .by = c(Grid,
+                    time_since_treatment,
+                    treatment))
 
-ggplot() +
-  geom_line(data = bp_year,
-            aes(x = time_treatment,
-                y = count,
-                color = DensityClass_f))
+ggplot(data = avg_dens,
+       aes(time_since_treatment,
+           avg_denclass,
+           color = treatment)) +
+  geom_line() +
+  facet_wrap(~Grid)
 
-# count per density class
-bp_counts <- bp_data_treatment |>
-  count(time_treatment,
-        DensityClass_f,
-        Grid)
+# average density class per year
+avg_dens_year <- bp_data_treatment |>
+  summarise(avg_denclass = mean(DensityClass,
+                                na.rm = TRUE),
+            .by = c(Grid,
+                    year))
 
-ggplot() +
-  geom_line(data = bp_counts,
-            aes(x = time_treatment,
-                y = n,
-                color = DensityClass_f)) +
+ggplot(data = avg_dens_year,
+       aes(year,
+           avg_denclass)) +
+  geom_line() +
   facet_wrap(~Grid,
-             scale = "free")
+             scales = "free")
+
+# Average density class per yst and treatment type
+
+avg_dens <- bp_data_treatment |>
+  summarise(avg_denclass = mean(DensityClass,
+                                na.rm = TRUE),
+            .by = c(Grid,
+                    time_since_treatment,
+                    Type))
+
+ggplot(data = avg_dens,
+       aes(time_since_treatment,
+           avg_denclass,
+           color = Grid)) +
+  geom_line() +
+  scale_x_continuous(limits = c(1, 11)) +
+  facet_wrap(~Type)
+# The large increase from time 0 to time 1 is because time 0 only occurs when
+# the treatment was applied at the incorrect time of year.
+# Also, how to account for
+
+
+# number of plots in density classes per year
+# bp_year <- bp_data_treatment |>
+#   count(time_since_treatment,
+#         DensityClass_f,
+#         name = "count")
+#
+# ggplot(data = bp_year,
+#        aes(x = time_since_treatment,
+#            y = count,
+#            color = DensityClass_f)) +
+#   # geom_point() +
+#   geom_smooth(se = FALSE)
+#
+# ggplot() +
+#   geom_boxplot(data = bp_year,
+#                aes(x = DensityClass_f,
+#                    y = count))
+#
+# ggplot() +
+#   geom_line(data = bp_year,
+#             aes(x = time_since_treatment,
+#                 y = count,
+#                 color = DensityClass_f))
+#
+# # count per density class
+# bp_counts <- bp_data_treatment |>
+#   count(time_treatment,
+#         DensityClass_f,
+#         Grid)
+#
+# ggplot() +
+#   geom_line(data = bp_counts,
+#             aes(x = time_treatment,
+#                 y = n,
+#                 color = DensityClass_f)) +
+#   facet_wrap(~Grid,
+#              scale = "free")
 
 
 # Creating models ----

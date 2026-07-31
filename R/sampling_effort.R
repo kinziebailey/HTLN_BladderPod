@@ -36,7 +36,7 @@ bh_counts <- VIEWS_HTLN_BLDP$tbl_5m_MoBladCount
 bh_period <- VIEWS_HTLN_BLDP$tlu_PeriodID
 bh_core <- VIEWS_HTLN_BLDP$tlu_5m_Grid_Core
 density_class <- VIEWS_HTLN_BLDP$tlu_DensityClasses
-bh_accuracy <- VIEWS_HTLN_BLDP$tbl_5m_Accuracy
+bh_accuracy1 <- VIEWS_HTLN_BLDP$tbl_5m_Accuracy
 bh_cedar1 <- VIEWS_HTLN_BLDP$tbl_5m_Cedar
 
 # stem density/basal area per unit area
@@ -54,7 +54,7 @@ bh_data1 <- bh_counts |>
   dplyr::left_join(bh_period,
                    by = "Period_ID") |>
   dplyr::left_join(bh_core) |>
-  dplyr::left_join(bh_accuracy,
+  dplyr::left_join(bh_accuracy1,
                    by = c("Period_ID",
                           "Location_ID")) |>
   dplyr::left_join(density_class,
@@ -208,6 +208,14 @@ ggplot() +
 # How do accuracy counts compare to estimated density class
 ggplot() +
   geom_histogram(data = bh_data,
+                 aes(x = DensityClass_Est)) +
+  geom_vline(data = bh_data,
+             aes(xintercept = DensityClass_Actual)) +
+  facet_wrap(~DensityClass_Actual,
+             scales = "free")
+
+ggplot() +
+  geom_density(data = bh_data,
                  aes(x = DensityClass_Est)) +
   geom_vline(data = bh_data,
              aes(xintercept = DensityClass_Actual)) +
@@ -1004,5 +1012,112 @@ ggplot() +
 
 
 # class 1, 2, 4, 5, 6 are pretty right skewed
+
+
+
+
+# Corrected vs Non-Corrected Density Classes ----
+# total density class counts
+bh_core <- bh_counts |>
+  right_join(bh_core,
+             by = "Location_ID") |>
+  dplyr::mutate(year = as.numeric(str_extract(Period_ID,
+                                              "\\d{4}")))
+
+bh_core_counts <- bh_core |>
+  summarise(estimated_count = n(),
+            .by = c("year",
+                    "DensityClass"))
+
+bh_uncorrect <- bh_core_counts |>
+  left_join(density_class,
+            by = c("DensityClass" = "DensityClass")) |>
+  mutate(low_end  = estimated_count * LowerBound,
+         high_end = estimated_count * UpperBound) |>
+  summarise(low_pi_uncorrected  = sum(low_end,  na.rm = TRUE),
+            high_pi_uncorrected = sum(high_end, na.rm = TRUE),
+            .by = "year")
+
+
+ggplot() +
+  geom_line(data = highlow5_core,
+            aes(x = Year,
+                y = lowPI,
+                color = "low-corrected")) +
+  geom_ribbon(data = highlow5_core,
+              aes(ymin = lowPI,
+                  ymax = highPI,
+                  x = Year),
+              alpha = 0.2,
+              fill = "red") +
+  geom_line(data = highlow5_core,
+            aes(x = Year,
+                y = highPI,
+                color = "high-corrected")) +
+  geom_line(data = bh_uncorrect,
+            aes(x = year,
+                y = low_pi_uncorrected,
+                color = "low-estimate")) +
+  geom_ribbon(data = bh_uncorrect,
+              aes(ymin = low_pi_uncorrected,
+                  ymax = high_pi_uncorrected,
+                  x = year),
+              alpha = 0.2,
+              fill = "blue") +
+  geom_line(data = bh_uncorrect,
+            aes(x = year,
+                y = high_pi_uncorrected,
+                color = "high-estimate"))
+
+percent_change <- bh_uncorrect |>
+  left_join(highlow5_core,
+            by = c("year" = "Year")) |>
+  mutate(low_change = lowPI - low_pi_uncorrected,
+         high_change = highPI - high_pi_uncorrected,
+         low_pct = 100 * low_change  / ifelse(low_pi_uncorrected  == 0, NA_real_,
+                                              low_pi_uncorrected),
+         high_pct = 100 * high_change / ifelse(high_pi_uncorrected == 0, NA_real_,
+                                               high_pi_uncorrected))
+
+# bh_accuracy <- bh_accuracy1 |>
+#   na.omit() |>
+#   dplyr::mutate(year = as.numeric(str_extract(Period_ID,
+#                                    "\\d{4}"))) |>
+#   mutate(total_act = n(),
+#          .by = c("DensityClass_Actual",
+#                  "year")) |>
+#   mutate(n_pair = n(),
+#          .by= c("DensityClass_Actual",
+#                 "DensityClass_Est",
+#                 "year")) |>
+#   complete(year,
+#            DensityClass_Est,
+#            DensityClass_Actual,
+#            fill = list(n_pair = 0)) |>
+#   mutate(DensityClass_Ratio = n_pair / total_act) |>
+#   mutate(prob = DensityClass_Ratio / sum(DensityClass_Ratio),
+#          .by = c("DensityClass_Est",
+#                  "year")) |>
+#   mutate(total_est = n(),
+#         .by = c("DensityClass_Est",
+#                 "year"))
+#
+# bh_correction <- bh_accuracy |>
+#   left_join(bh_core_counts,
+#             by = c("year",
+#                    "DensityClass_Est" = "DensityClass")) |>
+#   mutate(glad_prob = prob * estimated_count) |>
+#   summarise(adj_sum = sum(glad_prob),
+#             .by = c("year",
+#                     "DensityClass_Actual"))
+#
+# bh_corrected <- bh_correction |>
+#   left_join(density_class,
+#             by = c("DensityClass_Actual" = "DensityClass")) |>
+#   mutate(low_end = adj_sum * LowerBound,
+#          high_end = adj_sum * UpperBound) |>
+#   summarise(low_pi = sum(low_end),
+#             high_pi = sum(high_end),
+#             .by = "year")
 
 
