@@ -112,6 +112,73 @@ bp_data <- bp_data1 |>
                 DensityClass = case_when(DensityClass == -9999 ~ NA_real_,
                                          TRUE ~ DensityClass))
 
+# plotting plot based data
+bh <- bp_data |> filter(Grid == "Bloody Hill")
+ggplot() +
+  geom_violin(data = bh,
+               aes(x = factor(year),
+                   y = DensityClass))
+
+bhh <- bp_data |> filter(Grid == "Bloody Hill Hillside")
+ggplot() +
+  geom_violin(data = bhh,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+bhr <- bp_data |> filter(Grid == "Bloody Hill Road")
+ggplot() +
+  geom_violin(data = bhr,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+manley <- bp_data |> filter(Grid == "Manley")
+ggplot() +
+  geom_violin(data = manley,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+nbh <- bp_data |> filter(Grid == "North Bloody Hill")
+ggplot() +
+  geom_violin(data = nbh,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+nbhs <- bp_data |> filter(Grid == "North Bloody Hill South")
+ggplot() +
+  geom_violin(data = nbhs,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+nwbh <- bp_data |> filter(Grid == "Northwest Bloody Hill")
+ggplot() +
+  geom_violin(data = nwbh,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+tc <- bp_data |> filter(Grid == "Terrell Creek")
+ggplot() +
+  geom_violin(data = tc,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+walnut <- bp_data |> filter(Grid == "Walnut")
+ggplot() +
+  geom_violin(data = walnut,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+wr <- bp_data |> filter(Grid == "Wire Road")
+ggplot() +
+  geom_violin(data = wr,
+              aes(x = factor(year),
+                  y = DensityClass))
+
+ggplot() +
+  geom_point(data = (bh |> filter(grepl("100", CellID))),
+             aes(x = year,
+                 y = DensityClass)) +
+  facet_wrap(~CellID)
+
 
 # time since treatment
 bp_data_treatment <- bp_data |>
